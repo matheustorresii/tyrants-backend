@@ -5,7 +5,7 @@ Este documento descreve as APIs disponíveis no backend do Tyrants e como testá
 - **Base URL**: `http://localhost:8080`
 - **Formato**: `application/json`
 - **Campos desconhecidos**: Requisições com campos extras são rejeitadas com `400 Bad Request`.
-- **Armazenamento**: Mock em memória (dados são perdidos ao reiniciar o servidor).
+- **Armazenamento**: SQLite (persistente em arquivo `tyrants.db`).
 
 ## Como rodar o servidor
 
@@ -16,6 +16,26 @@ make run
 ```
 
 2. O servidor ficará acessível em `http://localhost:8080`.
+3. Persistência: os dados são salvos em `tyrants.db` (SQLite) no diretório raiz do projeto.
+   - Para limpar os dados, pare o servidor e remova o arquivo `tyrants.db`.
+   - Você pode alterar o DSN no `cmd/server/main.go` se necessário.
+
+### Banco de dados (SQLite)
+
+- O backend usa SQLite via driver em puro Go (sem dependências nativas), criando automaticamente o arquivo `tyrants.db` ao subir a aplicação.
+- Migrações são executadas automaticamente na inicialização, criando as tabelas `users` e `news` se não existirem.
+- Modo de journal: WAL (`_journal=WAL`), melhor para durabilidade e concorrência.
+
+#### O que acontece se o servidor cair?
+
+- Os dados ficam persistidos no arquivo `tyrants.db`. Você não perde os dados ao reiniciar o servidor.
+- Transações não finalizadas são revertidas na abertura do banco. Dados já confirmados (committed) permanecem.
+- Risco de perda só ocorreria por corrupção de disco/FS ou exclusão manual do arquivo.
+
+#### Personalização
+
+- O DSN padrão está em `cmd/server/main.go` (ex.: `file:tyrants.db?cache=shared&mode=rwc&_journal=WAL`).
+- Você pode apontar para outro caminho/arquivo ou ajustar parâmetros (cache, journal, etc.).
 
 ## Como preparar o Postman
 

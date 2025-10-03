@@ -10,8 +10,11 @@ import (
 )
 
 func main() {
-    // Initialize in-memory DB
-    storage := db.NewMockDB()
+    // Initialize persistent SQLite DB (file: tyrants.db in project root)
+    storage, err := db.NewSQLiteDB("file:tyrants.db?cache=shared&mode=rwc&_journal=WAL")
+    if err != nil {
+        log.Fatalf("db init error: %v", err)
+    }
 
     // Wire HTTP handlers
     h := userhandler.NewHandler(storage)
