@@ -264,6 +264,35 @@ Regras de validação:
 
 Observação: Em erros, o corpo retorna o texto do status (por exemplo, "Not Found"), não um JSON estruturado.
 
+### Resposta com detalhes do usuário
+
+O login retorna os campos adicionais do usuário e o Tyrant completo quando associado. Exemplo:
+
+```json
+{
+  "id": "ash-ketchum",
+  "name": "Ash Ketchum",
+  "tyrant": {
+    "id": "tumba",
+    "asset": "asset-tumba",
+    "nickname": "Máquina",
+    "evolutions": ["tumba-evo1"],
+    "attacks": [
+      {"name":"Soco Flamejante","power":60,"pp":15,"attributes":["fire"]}
+    ],
+    "hp": 120,
+    "attack": 30,
+    "magic": 10,
+    "defense": 20,
+    "speed": 12
+  },
+  "xp": 123,
+  "items": [
+    { "name": "potion", "asset": "asset-potion" }
+  ]
+}
+```
+
 ### Testando no Postman (passo a passo)
 
 1. Método: `POST`
@@ -393,6 +422,47 @@ Exemplo via cURL:
 
 ```bash
 curl -i -X DELETE http://localhost:8080/news/news-001
+```
+
+## Atualizar Usuário
+
+- Endpoint: `PUT /users/{id}`
+- Descrição: Atualiza campos opcionais do usuário: `tyrant` (string, id de um tyrant), `xp` (inteiro), `items` (lista com `name`, `asset`). Campos omitidos não são alterados.
+- Headers: `Content-Type: application/json`
+
+### Payload (request)
+
+```json
+{
+  "tyrant": "tumba",
+  "xp": 123,
+  "items": [
+    { "name": "potion", "asset": "asset-potion" },
+    { "name": "revive", "asset": "asset-revive" }
+  ]
+}
+```
+
+### Respostas
+
+- `200 OK` + corpo com detalhes atualizados do usuário (mesmo formato do login)
+- `404 Not Found` se o usuário não existir.
+- `400 Bad Request` se o JSON for inválido ou contiver campos desconhecidos.
+
+### Testando no Postman
+
+1. Método: `PUT`
+2. URL: `http://localhost:8080/users/ash-ketchum`
+3. Headers: `Content-Type: application/json`
+4. Body (raw, JSON): payload acima
+5. Clique em "Send" e verifique `200 OK` e o corpo atualizado.
+
+### cURL
+
+```bash
+curl -i -X PUT http://localhost:8080/users/ash-ketchum \
+  -H 'Content-Type: application/json' \
+  -d '{"tyrant":"tumba","xp":123,"items":[{"name":"potion","asset":"asset-potion"},{"name":"revive","asset":"asset-revive"}]}'
 ```
 
 ## Dicas e casos de erro

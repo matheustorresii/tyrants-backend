@@ -140,7 +140,10 @@ func (s *SQLiteDB) GetUserDetails(id string) (models.UserDetails, error) {
         return models.UserDetails{}, err
     }
     if tyrantID.Valid {
-        out.TyrantID = &tyrantID.String
+        t, err := s.GetTyrant(tyrantID.String)
+        if err == nil {
+            out.Tyrant = &t
+        }
     }
     itemsRows, err := s.db.Query(`SELECT name, asset FROM user_items WHERE user_id = ? ORDER BY name ASC`, id)
     if err != nil {
@@ -154,6 +157,9 @@ func (s *SQLiteDB) GetUserDetails(id string) (models.UserDetails, error) {
         }
         out.Items = append(out.Items, it)
     }
+    if out.Items == nil {
+        out.Items = []models.UserItem{}
+    }
     return out, itemsRows.Err()
 }
 
@@ -166,7 +172,11 @@ func (s *SQLiteDB) UpdateUser(id string, upd models.UserUpdate) (models.UserDeta
     defer func() { _ = tx.Rollback() }()
 
     // Ensure exists
-    if _, err := tx.Exec(`SELECT 1 FROM users WHERE id = ?`, id); err != nil {
+    var exists int
+    if err := tx.QueryRow(`SELECT 1 FROM users WHERE id = ?`, id).Scan(&exists); err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            return models.UserDetails{}, ErrUserNotFound
+        }
         return models.UserDetails{}, err
     }
 

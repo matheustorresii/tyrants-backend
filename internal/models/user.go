@@ -24,7 +24,7 @@ type UserUpdate struct {
 type UserDetails struct {
     ID       string     `json:"id"`
     Name     string     `json:"name"`
-    TyrantID *string    `json:"tyrant,omitempty"`
+    Tyrant   *Tyrant    `json:"tyrant,omitempty"`
     XP       int        `json:"xp"`
     Items    []UserItem `json:"items"`
 }
