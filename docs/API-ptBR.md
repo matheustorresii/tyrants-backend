@@ -133,6 +133,119 @@ curl -i -X POST http://localhost:8080/login \
 
 ---
 
+## Notícias (CRUD)
+
+- **Coleção**: `/news`
+- **Item**: `/news/{id}`
+- **Modelo**:
+
+```json
+{
+  "id": "string",
+  "image": "string",
+  "title": "string",
+  "content": "string",
+  "date": "string",
+  "category": "string|null"
+}
+```
+
+Observações:
+- `image` é uma string livre (não enum no backend), para permitir cadastrar novas imagens sem alterar o servidor.
+- Todos os campos, exceto `category`, são obrigatórios em criação e atualização.
+- Campos desconhecidos não são aceitos.
+
+### Listar notícias
+
+- **Endpoint**: `GET /news`
+- **Resposta**: `200 OK` com array de notícias
+
+Exemplo de teste no Postman:
+1. Método: `GET`
+2. URL: `http://localhost:8080/news`
+3. Clique em "Send"
+
+Exemplo via cURL:
+
+```bash
+curl -i http://localhost:8080/news
+```
+
+### Criar notícia
+
+- **Endpoint**: `POST /news`
+- **Headers**: `Content-Type: application/json`
+- **Resposta**: `201 Created` com a notícia criada; `409 Conflict` se `id` já existir; `400 Bad Request` para payload inválido/campos extras.
+
+Payload exemplo:
+
+```json
+{
+  "id": "news-001",
+  "image": "news-midas-signing",
+  "title": "Midas assinou com a liga!",
+  "content": "Detalhes sobre a assinatura...",
+  "date": "2025-10-03",
+  "category": "transfer"
+}
+```
+
+Exemplo via cURL:
+
+```bash
+curl -i -X POST http://localhost:8080/news \
+  -H 'Content-Type: application/json' \
+  -d '{"id":"news-001","image":"news-midas-signing","title":"Midas assinou com a liga!","content":"Detalhes sobre a assinatura...","date":"2025-10-03","category":"transfer"}'
+```
+
+### Obter notícia por ID
+
+- **Endpoint**: `GET /news/{id}`
+- **Resposta**: `200 OK` com a notícia; `404 Not Found` se não existir.
+
+Exemplo via cURL:
+
+```bash
+curl -i http://localhost:8080/news/news-001
+```
+
+### Atualizar notícia
+
+- **Endpoint**: `PUT /news/{id}`
+- **Headers**: `Content-Type: application/json`
+- **Resposta**: `200 OK` com a notícia atualizada; `404 Not Found` se não existir; `400 Bad Request` para payload inválido/campos extras.
+
+Payload exemplo:
+
+```json
+{
+  "image": "news-rosa-handshake",
+  "title": "Rosa fechou parceria",
+  "content": "Detalhes da parceria...",
+  "date": "2025-10-04",
+  "category": "partnership"
+}
+```
+
+Exemplo via cURL:
+
+```bash
+curl -i -X PUT http://localhost:8080/news/news-001 \
+  -H 'Content-Type: application/json' \
+  -d '{"image":"news-rosa-handshake","title":"Rosa fechou parceria","content":"Detalhes da parceria...","date":"2025-10-04","category":"partnership"}'
+```
+
+### Deletar notícia
+
+- **Endpoint**: `DELETE /news/{id}`
+- **Resposta**: `204 No Content` se excluída; `404 Not Found` se não existir.
+
+Exemplo via cURL:
+
+```bash
+curl -i -X DELETE http://localhost:8080/news/news-001
+```
+
 ## Dicas e casos de erro
 
 - Enviar campos extras (por exemplo, `{"id":"x","name":"y","extra":true}`) retorna `400 Bad Request`.

@@ -5,6 +5,7 @@ import (
     "net/http"
 
     "github.com/matheustorresii/tyrants-back/internal/db"
+    newshandler "github.com/matheustorresii/tyrants-back/internal/news"
     userhandler "github.com/matheustorresii/tyrants-back/internal/user"
 )
 
@@ -12,12 +13,15 @@ func main() {
     // Initialize in-memory DB
     storage := db.NewMockDB()
 
-    // Wire HTTP handler
+    // Wire HTTP handlers
     h := userhandler.NewHandler(storage)
+    nh := newshandler.NewHandler(storage)
 
     mux := http.NewServeMux()
     mux.HandleFunc("/users", h.PostUsers)
     mux.HandleFunc("/login", h.PostLogin)
+    mux.HandleFunc("/news", nh.NewsCollection)
+    mux.HandleFunc("/news/", nh.NewsItem)
 
     addr := "localhost:8080"
     log.Printf("Tyrants server listening on http://%s", addr)
