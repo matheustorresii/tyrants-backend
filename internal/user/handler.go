@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "errors"
     "net/http"
+    "strings"
 
     "github.com/matheustorresii/tyrants-back/internal/db"
     "github.com/matheustorresii/tyrants-back/internal/models"
@@ -13,6 +14,8 @@ import (
 type Service interface {
     CreateUser(user models.User) error
     GetUser(id string) (models.User, error)
+    GetUserDetails(id string) (models.UserDetails, error)
+    UpdateUser(id string, upd models.UserUpdate) (models.UserDetails, error)
 }
 
 // Handler provides HTTP handlers for user flows.
@@ -89,7 +92,7 @@ func (h *Handler) PostLogin(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    user, err := h.svc.GetUser(req.ID)
+    user, err := h.svc.GetUserDetails(req.ID)
     if err != nil {
         if errors.Is(err, db.ErrUserNotFound) {
             http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -101,6 +104,44 @@ func (h *Handler) PostLogin(w http.ResponseWriter, r *http.Request) {
 
     w.Header().Set("Content-Type", "application/json")
     _ = json.NewEncoder(w).Encode(user)
+}
+
+// PutUser handles PUT /users/{id}
+func (h *Handler) PutUser(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPut {
+        http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+        return
+    }
+    // Expect path /users/{id}
+    if !strings.HasPrefix(r.URL.Path, "/users/") {
+        http.NotFound(w, r)
+        return
+    }
+    id := strings.TrimPrefix(r.URL.Path, "/users/")
+    if id == "" || strings.Contains(id, "/") {
+        http.NotFound(w, r)
+        return
+    }
+
+    var req models.UserUpdate
+    dec := json.NewDecoder(r.Body)
+    dec.DisallowUnknownFields()
+    if err := dec.Decode(&req); err != nil {
+        http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+        return
+    }
+    // No strict required fields; all optional
+    details, err := h.svc.UpdateUser(id, req)
+    if err != nil {
+        if errors.Is(err, db.ErrUserNotFound) {
+            http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+            return
+        }
+        http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    _ = json.NewEncoder(w).Encode(details)
 }
 
 

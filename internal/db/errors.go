@@ -9,6 +9,9 @@ var (
 
     ErrNewsExists   = errors.New("news already exists")
     ErrNewsNotFound = errors.New("news not found")
+
+    ErrTyrantExists   = errors.New("tyrant already exists")
+    ErrTyrantNotFound = errors.New("tyrant not found")
 )
 
 

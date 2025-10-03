@@ -47,6 +47,135 @@ make run
 
 ---
 
+## Tyrants (CRUD)
+
+- **Coleção**: `/tyrants`
+- **Item**: `/tyrants/{id}`
+- **Modelo**:
+
+```json
+{
+  "id": "string",
+  "asset": "string",
+  "nickname": "string|null",
+  "evolutions": ["string", "string"],
+  "attacks": [
+    { "name": "string", "power": 50, "pp": 10, "attributes": ["fire", "aoe"] }
+  ],
+  "hp": 100,
+  "attack": 20,
+  "magic": 15,
+  "defense": 12,
+  "speed": 18
+}
+```
+
+Observações:
+- `id` é o nome canônico do Tyrant e também sua PK.
+- `asset` é uma string livre para referenciar imagens/recursos.
+- `nickname` é opcional e pode ser alterado via `PUT`.
+- `evolutions` é opcional; quando presente, é uma lista de nomes (ids) de outros tyrants.
+- `attacks` contém golpes com `name`, `power` (int), `pp` (int) e `attributes` (lista de strings).
+
+### Listar tyrants
+
+- **Endpoint**: `GET /tyrants`
+- **Resposta**: `200 OK` com array de tyrants
+
+Exemplo via cURL:
+
+```bash
+curl -i http://localhost:8080/tyrants
+```
+
+### Criar tyrant
+
+- **Endpoint**: `POST /tyrants`
+- **Headers**: `Content-Type: application/json`
+- **Resposta**: `201 Created`; `409 Conflict` se `id` já existir; `400 Bad Request` para payload inválido/campos extras.
+
+Payload exemplo:
+
+```json
+{
+  "id": "tumba",
+  "asset": "asset-tumba",
+  "nickname": "Máquina",
+  "evolutions": ["tumba-evo1", "tumba-evo2"],
+  "attacks": [
+    {"name":"Soco Flamejante","power":60,"pp":15,"attributes":["fire"]},
+    {"name":"Investida","power":40,"pp":25,"attributes":["physical"]}
+  ],
+  "hp": 120,
+  "attack": 30,
+  "magic": 10,
+  "defense": 20,
+  "speed": 12
+}
+```
+
+Exemplo via cURL:
+
+```bash
+curl -i -X POST http://localhost:8080/tyrants \
+  -H 'Content-Type: application/json' \
+  -d '{"id":"tumba","asset":"asset-tumba","nickname":"Máquina","evolutions":["tumba-evo1","tumba-evo2"],"attacks":[{"name":"Soco Flamejante","power":60,"pp":15,"attributes":["fire"]},{"name":"Investida","power":40,"pp":25,"attributes":["physical"]}],"hp":120,"attack":30,"magic":10,"defense":20,"speed":12}'
+```
+
+### Obter tyrant por ID
+
+- **Endpoint**: `GET /tyrants/{id}`
+- **Resposta**: `200 OK`; `404 Not Found` se não existir.
+
+Exemplo via cURL:
+
+```bash
+curl -i http://localhost:8080/tyrants/tumba
+```
+
+### Atualizar tyrant
+
+- **Endpoint**: `PUT /tyrants/{id}`
+- **Headers**: `Content-Type: application/json`
+- **Resposta**: `200 OK`; `404 Not Found` se não existir; `400 Bad Request` para payload inválido/campos extras.
+
+Payload exemplo (campos opcionais `nickname`, `evolutions`, `attacks` podem ser omitidos para manter os valores atuais):
+
+```json
+{
+  "asset": "asset-tumba-v2",
+  "nickname": "Tumbalord",
+  "evolutions": ["tumba-evo2"],
+  "attacks": [
+    {"name":"Soco Flamejante","power":65,"pp":15,"attributes":["fire","burn"]}
+  ],
+  "hp": 130,
+  "attack": 35,
+  "magic": 12,
+  "defense": 22,
+  "speed": 14
+}
+```
+
+Exemplo via cURL:
+
+```bash
+curl -i -X PUT http://localhost:8080/tyrants/tumba \
+  -H 'Content-Type: application/json' \
+  -d '{"asset":"asset-tumba-v2","nickname":"Tumbalord","evolutions":["tumba-evo2"],"attacks":[{"name":"Soco Flamejante","power":65,"pp":15,"attributes":["fire","burn"]}],"hp":130,"attack":35,"magic":12,"defense":22,"speed":14}'
+```
+
+### Deletar tyrant
+
+- **Endpoint**: `DELETE /tyrants/{id}`
+- **Resposta**: `204 No Content`; `404 Not Found` se não existir.
+
+Exemplo via cURL:
+
+```bash
+curl -i -X DELETE http://localhost:8080/tyrants/tumba
+```
+
 ## Criar Usuário
 
 - **Endpoint**: `POST /users`

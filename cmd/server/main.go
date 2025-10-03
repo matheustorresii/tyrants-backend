@@ -6,6 +6,7 @@ import (
 
     "github.com/matheustorresii/tyrants-back/internal/db"
     newshandler "github.com/matheustorresii/tyrants-back/internal/news"
+    tyranthandler "github.com/matheustorresii/tyrants-back/internal/tyrant"
     userhandler "github.com/matheustorresii/tyrants-back/internal/user"
 )
 
@@ -19,12 +20,16 @@ func main() {
     // Wire HTTP handlers
     h := userhandler.NewHandler(storage)
     nh := newshandler.NewHandler(storage)
+    th := tyranthandler.NewHandler(storage)
 
     mux := http.NewServeMux()
     mux.HandleFunc("/users", h.PostUsers)
     mux.HandleFunc("/login", h.PostLogin)
+    mux.HandleFunc("/users/", h.PutUser)
     mux.HandleFunc("/news", nh.NewsCollection)
     mux.HandleFunc("/news/", nh.NewsItem)
+    mux.HandleFunc("/tyrants", th.TyrantsCollection)
+    mux.HandleFunc("/tyrants/", th.TyrantsItem)
 
     addr := "localhost:8080"
     log.Printf("Tyrants server listening on http://%s", addr)
