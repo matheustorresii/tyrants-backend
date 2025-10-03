@@ -3,9 +3,12 @@ package main
 import (
     "log"
     "net/http"
+    "time"
+    "math/rand"
 
     "github.com/matheustorresii/tyrants-back/internal/db"
     newshandler "github.com/matheustorresii/tyrants-back/internal/news"
+    "github.com/matheustorresii/tyrants-back/internal/scene"
     tyranthandler "github.com/matheustorresii/tyrants-back/internal/tyrant"
     userhandler "github.com/matheustorresii/tyrants-back/internal/user"
 )
@@ -21,6 +24,7 @@ func main() {
     h := userhandler.NewHandler(storage)
     nh := newshandler.NewHandler(storage)
     th := tyranthandler.NewHandler(storage)
+    hub := scene.NewHub(storage)
 
     mux := http.NewServeMux()
     mux.HandleFunc("/users", h.PostUsers)
@@ -30,9 +34,11 @@ func main() {
     mux.HandleFunc("/news/", nh.NewsItem)
     mux.HandleFunc("/tyrants", th.TyrantsCollection)
     mux.HandleFunc("/tyrants/", th.TyrantsItem)
+    mux.HandleFunc("/scene/ws", hub.ServeWS)
 
     addr := "localhost:8080"
     log.Printf("Tyrants server listening on http://%s", addr)
+    randSeedOnce()
     if err := http.ListenAndServe(addr, loggingMiddleware(mux)); err != nil {
         log.Fatalf("server error: %v", err)
     }
@@ -44,6 +50,11 @@ func loggingMiddleware(next http.Handler) http.Handler {
         log.Printf("%s %s", r.Method, r.URL.Path)
         next.ServeHTTP(w, r)
     })
+}
+
+func randSeedOnce() {
+    // Seed default rand used in scene damage calculations
+    rand.Seed(time.Now().UnixNano())
 }
 
 
