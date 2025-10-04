@@ -32,6 +32,7 @@ func NewHandler(svc Service) *Handler {
 type createUserRequest struct {
     ID   string `json:"id"`
     Name string `json:"name"`
+    Admin bool   `json:"admin"`
 }
 
 // loginRequest represents the payload for POST /login.
@@ -58,7 +59,7 @@ func (h *Handler) PostUsers(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    user := models.User{ID: req.ID, Name: req.Name}
+    user := models.User{ID: req.ID, Name: req.Name, Admin: req.Admin}
     if err := h.svc.CreateUser(user); err != nil {
         if errors.Is(err, db.ErrUserExists) {
             http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)

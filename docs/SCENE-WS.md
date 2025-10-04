@@ -101,21 +101,25 @@ Observações:
 ```json
 {
   "updateState": {
-    "mystelune": {
-      "fullHp": 120,
-      "currentHp": 95,
-      "pp": {
-        "Salto": { "fullPP": 15, "currentPP": 14 },
-        "Investida": { "fullPP": 25, "currentPP": 25 }
+    "tyrants": [
+      {
+        "id": "mystelune",
+        "fullHp": 120,
+        "currentHp": 95,
+        "attacks": [
+          { "name": "Salto", "fullPP": 15, "currentPP": 14 },
+          { "name": "Investida", "fullPP": 25, "currentPP": 25 }
+        ]
+      },
+      {
+        "id": "platybot",
+        "fullHp": 110,
+        "currentHp": 110,
+        "attacks": [
+          { "name": "Golpe", "fullPP": 20, "currentPP": 20 }
+        ]
       }
-    },
-    "platybot": {
-      "fullHp": 110,
-      "currentHp": 110,
-      "pp": {
-        "Golpe": { "fullPP": 20, "currentPP": 20 }
-      }
-    }
+    ]
   },
   "turns": [
     { "id": "aliado1",  "asset": "asset-aliado1",  "enemy": false },

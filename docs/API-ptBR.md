@@ -179,7 +179,7 @@ curl -i -X DELETE http://localhost:8080/tyrants/tumba
 ## Criar Usuário
 
 - **Endpoint**: `POST /users`
-- **Descrição**: Cria um usuário a partir de um `id` (escolhido pelo próprio usuário) e `name`.
+- **Descrição**: Cria um usuário com `id`, `name` e, opcionalmente, `admin` (bool). Se `admin=true`, o usuário não possui `tyrant`, `xp` ou `items`.
 - **Headers**: `Content-Type: application/json`
 
 ### Payload (request)
@@ -187,13 +187,15 @@ curl -i -X DELETE http://localhost:8080/tyrants/tumba
 ```json
 {
   "id": "ash-ketchum",
-  "name": "Ash Ketchum"
+  "name": "Ash Ketchum",
+  "admin": false
 }
 ```
 
 Regras de validação:
 - **id**: string não vazia, escolhida pelo usuário
 - **name**: string não vazia
+- **admin**: booleano opcional (padrão: false)
 - Campos desconhecidos não são permitidos (gera `400 Bad Request`).
 
 ### Respostas
@@ -203,7 +205,8 @@ Regras de validação:
 ```json
 {
   "id": "ash-ketchum",
-  "name": "Ash Ketchum"
+  "name": "Ash Ketchum",
+  "admin": false
 }
 ```
 
@@ -225,7 +228,7 @@ Observação: Em erros, o corpo retorna o texto do status (por exemplo, "Conflic
 ```bash
 curl -i -X POST http://localhost:8080/users \
   -H 'Content-Type: application/json' \
-  -d '{"id":"ash-ketchum","name":"Ash Ketchum"}'
+  -d '{"id":"ash-ketchum","name":"Ash Ketchum","admin":false}'
 ```
 
 ---
@@ -266,12 +269,13 @@ Observação: Em erros, o corpo retorna o texto do status (por exemplo, "Not Fou
 
 ### Resposta com detalhes do usuário
 
-O login retorna os campos adicionais do usuário e o Tyrant completo quando associado. Exemplo:
+O login retorna os campos adicionais do usuário e o Tyrant completo quando associado. Se `admin=true`, os campos `tyrant`, `xp` e `items` não aparecem.
 
 ```json
 {
   "id": "ash-ketchum",
   "name": "Ash Ketchum",
+  "admin": false,
   "tyrant": {
     "id": "tumba",
     "asset": "asset-tumba",

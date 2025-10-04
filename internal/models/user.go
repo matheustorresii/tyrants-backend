@@ -5,6 +5,7 @@ package models
 type User struct {
     ID   string `json:"id"`
     Name string `json:"name"`
+    Admin bool   `json:"admin"`
 }
 
 // UserItem represents an item owned by a user.
@@ -24,9 +25,10 @@ type UserUpdate struct {
 type UserDetails struct {
     ID       string     `json:"id"`
     Name     string     `json:"name"`
+    Admin    bool       `json:"admin"`
     Tyrant   *Tyrant    `json:"tyrant,omitempty"`
-    XP       int        `json:"xp"`
-    Items    []UserItem `json:"items"`
+    XP       *int       `json:"xp,omitempty"`
+    Items    *[]UserItem `json:"items,omitempty"`
 }
 
 

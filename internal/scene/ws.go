@@ -414,18 +414,19 @@ func (h *Hub) handleAttack(a attackEvent) {
         target.CurrentHP = 0
         target.Alive = false
     }
-    // Build HP+PP update snapshot
-    snapshot := map[string]any{}
+    // Build HP+PP update snapshot as array
+    tyrantUpdates := make([]map[string]any, 0, len(h.participants))
     for id, p := range h.participants {
-        ppMap := map[string]any{}
+        attacksArr := make([]map[string]any, 0, len(p.AttackPP))
         for name, v := range p.AttackPP {
-            ppMap[name] = map[string]any{"fullPP": v.Full, "currentPP": v.Current}
+            attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
         }
-        snapshot[id] = map[string]any{
+        tyrantUpdates = append(tyrantUpdates, map[string]any{
+            "id":        id,
             "fullHp":    p.FullHP,
             "currentHp": p.CurrentHP,
-            "pp":        ppMap,
-        }
+            "attacks":   attacksArr,
+        })
     }
     // Determine victory
     allEnemiesDown := true
@@ -438,7 +439,7 @@ func (h *Hub) handleAttack(a attackEvent) {
             allAlliesDown = false
         }
     }
-    var status any = snapshot
+    var status any = map[string]any{"tyrants": tyrantUpdates}
     if allEnemiesDown {
         status = "WIN"
         h.inBattle = false

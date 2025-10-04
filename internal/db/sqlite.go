@@ -43,6 +43,8 @@ func (s *SQLiteDB) migrate(ctx context.Context) error {
             tyrant_id TEXT NULL,
             xp INTEGER NOT NULL DEFAULT 0
         );`,
+        // add admin column if missing (ignore error if already exists)
+        `ALTER TABLE users ADD COLUMN admin INTEGER NOT NULL DEFAULT 0;`,
         `CREATE TABLE IF NOT EXISTS user_items (
             user_id TEXT NOT NULL,
             name TEXT NOT NULL,
@@ -94,6 +96,11 @@ func (s *SQLiteDB) migrate(ctx context.Context) error {
     }
     for _, stmt := range stmts {
         if _, err := s.db.ExecContext(ctx, stmt); err != nil {
+            // ignore duplicate column errors for ALTERs
+            msg := strings.ToLower(err.Error())
+            if strings.Contains(msg, "duplicate column") || strings.Contains(msg, "already exists") {
+                continue
+            }
             return fmt.Errorf("migrate: %w", err)
         }
     }
@@ -106,7 +113,7 @@ func (s *SQLiteDB) CreateUser(user models.User) error {
     if user.ID == "" {
         return errors.New("user id cannot be empty")
     }
-    _, err := s.db.Exec(`INSERT INTO users(id, name, xp) VALUES(?, ?, 0)`, user.ID, user.Name)
+    _, err := s.db.Exec(`INSERT INTO users(id, name, admin, xp) VALUES(?, ?, ?, 0)`, user.ID, user.Name, boolToInt(user.Admin))
     if err != nil {
         if isUniqueConstraintError(err) {
             return ErrUserExists
@@ -117,50 +124,70 @@ func (s *SQLiteDB) CreateUser(user models.User) error {
 }
 
 func (s *SQLiteDB) GetUser(id string) (models.User, error) {
-    row := s.db.QueryRow(`SELECT id, name FROM users WHERE id = ?`, id)
+    row := s.db.QueryRow(`SELECT id, name, admin FROM users WHERE id = ?`, id)
     var u models.User
-    if err := row.Scan(&u.ID, &u.Name); err != nil {
+    var adminInt int
+    if err := row.Scan(&u.ID, &u.Name, &adminInt); err != nil {
         if errors.Is(err, sql.ErrNoRows) {
             return models.User{}, ErrUserNotFound
         }
         return models.User{}, err
     }
+    u.Admin = adminInt != 0
     return u, nil
 }
 
 // GetUserDetails retrieves a full user view including tyrant and items.
 func (s *SQLiteDB) GetUserDetails(id string) (models.UserDetails, error) {
     var out models.UserDetails
-    row := s.db.QueryRow(`SELECT id, name, tyrant_id, xp FROM users WHERE id = ?`, id)
+    row := s.db.QueryRow(`SELECT id, name, admin, tyrant_id, xp FROM users WHERE id = ?`, id)
     var tyrantID sql.NullString
-    if err := row.Scan(&out.ID, &out.Name, &tyrantID, &out.XP); err != nil {
+    var adminInt int
+    var xpVal int
+    if err := row.Scan(&out.ID, &out.Name, &adminInt, &tyrantID, &xpVal); err != nil {
         if errors.Is(err, sql.ErrNoRows) {
             return models.UserDetails{}, ErrUserNotFound
         }
         return models.UserDetails{}, err
     }
+    out.Admin = adminInt != 0
+    if !out.Admin {
+        out.XP = &xpVal
+    } else {
+        out.XP = nil
+    }
     if tyrantID.Valid {
-        t, err := s.GetTyrant(tyrantID.String)
-        if err == nil {
-            out.Tyrant = &t
+        if !out.Admin {
+            t, err := s.GetTyrant(tyrantID.String)
+            if err == nil {
+                out.Tyrant = &t
+            }
         }
     }
-    itemsRows, err := s.db.Query(`SELECT name, asset FROM user_items WHERE user_id = ? ORDER BY name ASC`, id)
-    if err != nil {
-        return models.UserDetails{}, err
-    }
-    defer itemsRows.Close()
-    for itemsRows.Next() {
-        var it models.UserItem
-        if err := itemsRows.Scan(&it.Name, &it.Asset); err != nil {
+    if !out.Admin {
+        itemsRows, err := s.db.Query(`SELECT name, asset FROM user_items WHERE user_id = ? ORDER BY name ASC`, id)
+        if err != nil {
             return models.UserDetails{}, err
         }
-        out.Items = append(out.Items, it)
+        defer itemsRows.Close()
+        var list []models.UserItem
+        for itemsRows.Next() {
+            var it models.UserItem
+            if err := itemsRows.Scan(&it.Name, &it.Asset); err != nil {
+                return models.UserDetails{}, err
+            }
+            list = append(list, it)
+        }
+        out.Items = &list
+        if out.Items == nil {
+            empty := make([]models.UserItem, 0)
+            out.Items = &empty
+        }
+        return out, itemsRows.Err()
     }
-    if out.Items == nil {
-        out.Items = []models.UserItem{}
-    }
-    return out, itemsRows.Err()
+    // admin: no items
+    out.Items = nil
+    return out, nil
 }
 
 // UpdateUser updates optional tyrant, xp and items.
@@ -479,5 +506,7 @@ func isUniqueConstraintError(err error) bool {
     msg := strings.ToLower(err.Error())
     return strings.Contains(msg, "unique") || strings.Contains(msg, "constraint failed")
 }
+
+func boolToInt(b bool) int { if b { return 1 }; return 0 }
 
 
