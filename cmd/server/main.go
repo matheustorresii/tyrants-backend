@@ -36,10 +36,10 @@ func main() {
     mux.HandleFunc("/tyrants/", th.TyrantsItem)
     mux.HandleFunc("/scene/ws", hub.ServeWS)
 
-    addr := "localhost:8080"
-    log.Printf("Tyrants server listening on http://%s", addr)
+    addr := ":8080"
+    log.Printf("Tyrants server listening on http://localhost:8080 (all interfaces)")
     randSeedOnce()
-    if err := http.ListenAndServe(addr, loggingMiddleware(mux)); err != nil {
+    if err := http.ListenAndServe(addr, loggingMiddleware(corsMiddleware(mux))); err != nil {
         log.Fatalf("server error: %v", err)
     }
 }
@@ -55,6 +55,19 @@ func loggingMiddleware(next http.Handler) http.Handler {
 func randSeedOnce() {
     // Seed default rand used in scene damage calculations
     rand.Seed(time.Now().UnixNano())
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        if r.Method == http.MethodOptions {
+            w.WriteHeader(http.StatusNoContent)
+            return
+        }
+        next.ServeHTTP(w, r)
+    })
 }
 
 
