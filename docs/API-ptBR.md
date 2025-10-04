@@ -64,7 +64,6 @@ make run
   ],
   "hp": 100,
   "attack": 20,
-  "magic": 15,
   "defense": 12,
   "speed": 18
 }
@@ -108,7 +107,6 @@ Payload exemplo:
   ],
   "hp": 120,
   "attack": 30,
-  "magic": 10,
   "defense": 20,
   "speed": 12
 }
@@ -119,7 +117,7 @@ Exemplo via cURL:
 ```bash
 curl -i -X POST http://localhost:8080/tyrants \
   -H 'Content-Type: application/json' \
-  -d '{"id":"tumba","asset":"asset-tumba","nickname":"Máquina","evolutions":["tumba-evo1","tumba-evo2"],"attacks":[{"name":"Soco Flamejante","power":60,"pp":15,"attributes":["fire"]},{"name":"Investida","power":40,"pp":25,"attributes":["physical"]}],"hp":120,"attack":30,"magic":10,"defense":20,"speed":12}'
+  -d '{"id":"tumba","asset":"asset-tumba","nickname":"Máquina","evolutions":["tumba-evo1","tumba-evo2"],"attacks":[{"name":"Soco Flamejante","power":60,"pp":15,"attributes":["fire"]},{"name":"Investida","power":40,"pp":25,"attributes":["physical"]}],"hp":120,"attack":30,"defense":20,"speed":12}'
 ```
 
 ### Obter tyrant por ID
@@ -151,7 +149,6 @@ Payload exemplo (campos opcionais `nickname`, `evolutions`, `attacks` podem ser 
   ],
   "hp": 130,
   "attack": 35,
-  "magic": 12,
   "defense": 22,
   "speed": 14
 }
@@ -162,7 +159,7 @@ Exemplo via cURL:
 ```bash
 curl -i -X PUT http://localhost:8080/tyrants/tumba \
   -H 'Content-Type: application/json' \
-  -d '{"asset":"asset-tumba-v2","nickname":"Tumbalord","evolutions":["tumba-evo2"],"attacks":[{"name":"Soco Flamejante","power":65,"pp":15,"attributes":["fire","burn"]}],"hp":130,"attack":35,"magic":12,"defense":22,"speed":14}'
+  -d '{"asset":"asset-tumba-v2","nickname":"Tumbalord","evolutions":["tumba-evo2"],"attacks":[{"name":"Soco Flamejante","power":65,"pp":15,"attributes":["fire","burn"]}],"hp":130,"attack":35,"defense":22,"speed":14}'
 ```
 
 ### Deletar tyrant
@@ -286,7 +283,6 @@ O login retorna os campos adicionais do usuário e o Tyrant completo quando asso
     ],
     "hp": 120,
     "attack": 30,
-    "magic": 10,
     "defense": 20,
     "speed": 12
   },

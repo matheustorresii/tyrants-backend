@@ -44,7 +44,6 @@ type createTyrantRequest struct {
     Attacks    []attackPayload  `json:"attacks"`
     HP         int              `json:"hp"`
     Attack     int              `json:"attack"`
-    Magic      int              `json:"magic"`
     Defense    int              `json:"defense"`
     Speed      int              `json:"speed"`
 }
@@ -56,7 +55,6 @@ type updateTyrantRequest struct {
     Attacks    *[]attackPayload `json:"attacks,omitempty"`
     HP         int              `json:"hp"`
     Attack     int              `json:"attack"`
-    Magic      int              `json:"magic"`
     Defense    int              `json:"defense"`
     Speed      int              `json:"speed"`
 }
@@ -82,7 +80,7 @@ func (h *Handler) TyrantsCollection(w http.ResponseWriter, r *http.Request) {
             http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             return
         }
-        if req.ID == "" || req.Asset == "" || req.HP == 0 && req.Attack == 0 && req.Magic == 0 && req.Defense == 0 && req.Speed == 0 {
+        if req.ID == "" || req.Asset == "" || req.HP == 0 && req.Attack == 0 && req.Defense == 0 && req.Speed == 0 {
             // require id, asset, and some stats provided (>= could be zero legitimately but we assume >0 typical; rely on client to pass intended values)
             http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             return
@@ -99,7 +97,6 @@ func (h *Handler) TyrantsCollection(w http.ResponseWriter, r *http.Request) {
             Evolutions: evolutions,
             HP:         req.HP,
             Attack:     req.Attack,
-            Magic:      req.Magic,
             Defense:    req.Defense,
             Speed:      req.Speed,
         }
@@ -193,7 +190,6 @@ func (h *Handler) TyrantsItem(w http.ResponseWriter, r *http.Request) {
         }
         t.HP = req.HP
         t.Attack = req.Attack
-        t.Magic = req.Magic
         t.Defense = req.Defense
         t.Speed = req.Speed
         if req.Attacks != nil {

@@ -18,7 +18,6 @@ type Tyrant struct {
     Attacks    []Attack `json:"attacks"`
     HP         int      `json:"hp"`
     Attack     int      `json:"attack"`
-    Magic      int      `json:"magic"`
     Defense    int      `json:"defense"`
     Speed      int      `json:"speed"`
 }

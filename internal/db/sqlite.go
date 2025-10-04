@@ -68,10 +68,10 @@ func (s *SQLiteDB) migrate(ctx context.Context) error {
             nickname TEXT NULL,
             hp INTEGER NOT NULL,
             attack INTEGER NOT NULL,
-            magic INTEGER NOT NULL,
             defense INTEGER NOT NULL,
             speed INTEGER NOT NULL
         );`,
+        // Migrate: drop magic column if it exists is not straightforward in SQLite; keep schema forward-only
         `CREATE TABLE IF NOT EXISTS tyrant_evolutions (
             tyrant_id TEXT NOT NULL,
             evolution_id TEXT NOT NULL,
@@ -328,8 +328,8 @@ func (s *SQLiteDB) CreateTyrant(t models.Tyrant) error {
         _ = tx.Rollback()
     }()
 
-    if _, err := tx.Exec(`INSERT INTO tyrants(id, asset, nickname, hp, attack, magic, defense, speed) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
-        t.ID, t.Asset, t.Nickname, t.HP, t.Attack, t.Magic, t.Defense, t.Speed,
+    if _, err := tx.Exec(`INSERT INTO tyrants(id, asset, nickname, hp, attack, defense, speed) VALUES(?, ?, ?, ?, ?, ?, ?)`,
+        t.ID, t.Asset, t.Nickname, t.HP, t.Attack, t.Defense, t.Speed,
     ); err != nil {
         if isUniqueConstraintError(err) {
             return ErrTyrantExists
@@ -359,9 +359,9 @@ func (s *SQLiteDB) CreateTyrant(t models.Tyrant) error {
 
 func (s *SQLiteDB) GetTyrant(id string) (models.Tyrant, error) {
     var t models.Tyrant
-    row := s.db.QueryRow(`SELECT id, asset, nickname, hp, attack, magic, defense, speed FROM tyrants WHERE id = ?`, id)
+    row := s.db.QueryRow(`SELECT id, asset, nickname, hp, attack, defense, speed FROM tyrants WHERE id = ?`, id)
     var nickname sql.NullString
-    if err := row.Scan(&t.ID, &t.Asset, &nickname, &t.HP, &t.Attack, &t.Magic, &t.Defense, &t.Speed); err != nil {
+    if err := row.Scan(&t.ID, &t.Asset, &nickname, &t.HP, &t.Attack, &t.Defense, &t.Speed); err != nil {
         if errors.Is(err, sql.ErrNoRows) {
             return models.Tyrant{}, ErrTyrantNotFound
         }
@@ -441,8 +441,8 @@ func (s *SQLiteDB) UpdateTyrant(id string, t models.Tyrant) (models.Tyrant, erro
     }
     defer func() { _ = tx.Rollback() }()
 
-    res, err := tx.Exec(`UPDATE tyrants SET asset = ?, nickname = ?, hp = ?, attack = ?, magic = ?, defense = ?, speed = ? WHERE id = ?`,
-        t.Asset, t.Nickname, t.HP, t.Attack, t.Magic, t.Defense, t.Speed, id,
+    res, err := tx.Exec(`UPDATE tyrants SET asset = ?, nickname = ?, hp = ?, attack = ?, defense = ?, speed = ? WHERE id = ?`,
+        t.Asset, t.Nickname, t.HP, t.Attack, t.Defense, t.Speed, id,
     )
     if err != nil {
         return models.Tyrant{}, err
