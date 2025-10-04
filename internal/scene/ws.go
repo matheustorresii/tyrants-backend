@@ -41,6 +41,12 @@ type Hub struct {
     turnIndex          int
     inBattle           bool
     currentActor       string
+    // voting state
+    votingActive       bool
+    voteUntilDeath     int
+    voteToParty        int
+    votedAllies        map[string]bool
+    totalAllies        int
 }
 
 func NewHub(svc TyrantService) *Hub {
@@ -98,10 +104,13 @@ type attackEvent struct {
 type incoming struct {
     Image  *string      `json:"image,omitempty"`
     Battle *string      `json:"battle,omitempty"`
+    VoteEnabled *bool   `json:"voteEnabled,omitempty"`
     Join   *string      `json:"join,omitempty"`
     Enemy  *bool        `json:"enemy,omitempty"`
     Attack *attackEvent `json:"attack,omitempty"`
     Clean  *bool        `json:"clean,omitempty"`
+    Vote   *string      `json:"vote,omitempty"`
+    User   *string      `json:"user,omitempty"`
 }
 
 func (h *Hub) handleIncoming(c *Client, data []byte) {
@@ -117,11 +126,25 @@ func (h *Hub) handleIncoming(c *Client, data []byte) {
     case msg.Join != nil:
         h.handleJoin(c, *msg.Join, msg.Enemy)
     case msg.Battle != nil:
-        h.handleBattle(*msg.Battle)
+        voteEnabled := false
+        if msg.VoteEnabled != nil {
+            voteEnabled = *msg.VoteEnabled
+        }
+        h.handleBattle(*msg.Battle, voteEnabled)
     case msg.Attack != nil:
         h.handleAttack(*msg.Attack)
     case msg.Clean != nil && *msg.Clean:
         h.handleClean()
+    case msg.Vote != nil:
+        var voter string
+        if msg.User != nil {
+            voter = *msg.User
+        } else {
+            for id, cli := range h.tyrantIDToClient {
+                if cli == c { voter = id; break }
+            }
+        }
+        h.handleVote(c, voter, *msg.Vote)
     default:
         // ignore
     }
@@ -152,6 +175,56 @@ func (h *Hub) handleClean() {
     h.mu.Unlock()
 
     h.broadcast(map[string]any{"clean": true, "turns": turns})
+}
+
+func (h *Hub) handleVote(c *Client, voterID string, choice string) {
+    h.mu.Lock()
+    if !h.votingActive {
+        h.mu.Unlock()
+        if c != nil { _ = c.conn.WriteJSON(map[string]any{"error": "voting not active"}) }
+        return
+    }
+    // only allies can vote
+    p := h.participants[voterID]
+    if p == nil || p.Enemy {
+        h.mu.Unlock()
+        if c != nil { _ = c.conn.WriteJSON(map[string]any{"error": "only allies can vote"}) }
+        return
+    }
+    if h.votedAllies[voterID] {
+        counts := map[string]int{"UNTIL_DEATH": h.voteUntilDeath, "TO_PARTY": h.voteToParty}
+        h.mu.Unlock()
+        if c != nil { _ = c.conn.WriteJSON(map[string]any{"voting": counts}) }
+        return
+    }
+    switch choice {
+    case "UNTIL_DEATH":
+        h.voteUntilDeath++
+    case "TO_PARTY":
+        h.voteToParty++
+    default:
+        h.mu.Unlock()
+        if c != nil { _ = c.conn.WriteJSON(map[string]any{"error": "invalid vote"}) }
+        return
+    }
+    h.votedAllies[voterID] = true
+    counts := map[string]int{"UNTIL_DEATH": h.voteUntilDeath, "TO_PARTY": h.voteToParty}
+    done := len(h.votedAllies) >= h.totalAllies
+    if done {
+        h.votingActive = false
+        h.inBattle = true
+        // tie -> TO_PARTY
+        result := "TO_PARTY"
+        if h.voteUntilDeath > h.voteToParty { result = "UNTIL_DEATH" }
+        _ = result
+        h.mu.Unlock()
+        h.broadcast(map[string]any{"voting": counts})
+        turns := h.turnsViewLocked()
+        h.broadcast(map[string]any{"battle": "", "turns": turns})
+        return
+    }
+    h.mu.Unlock()
+    h.broadcast(map[string]any{"voting": counts})
 }
 
 func (h *Hub) handleJoin(c *Client, tyrantID string, enemy *bool) {
@@ -191,9 +264,10 @@ func (h *Hub) handleJoin(c *Client, tyrantID string, enemy *bool) {
     _ = c.conn.WriteJSON(map[string]any{"joined": t.ID, "enemy": en})
 }
 
-func (h *Hub) handleBattle(startWith string) {
+func (h *Hub) handleBattle(startWith string, voteEnabled bool) {
     h.mu.Lock()
-    h.inBattle = true
+    h.inBattle = !voteEnabled
+    h.votingActive = voteEnabled
     // Reset HP/Alive and PP for a new battle
     for _, p := range h.participants {
         p.CurrentHP = p.FullHP
@@ -215,8 +289,19 @@ func (h *Hub) handleBattle(startWith string) {
     }
     next := h.nextAliveLocked()
     h.currentActor = next
+    if voteEnabled {
+        h.voteUntilDeath = 0
+        h.voteToParty = 0
+        h.votedAllies = make(map[string]bool)
+        h.totalAllies = 0
+        for _, p := range h.participants {
+            if p != nil && !p.Enemy { h.totalAllies++ }
+        }
+        h.mu.Unlock()
+        h.broadcast(map[string]any{"voting": map[string]int{"UNTIL_DEATH": 0, "TO_PARTY": 0}})
+        return
+    }
     h.mu.Unlock()
-
     turns := h.turnsViewLocked()
     h.broadcast(map[string]any{"battle": startWith, "turns": turns})
 }

@@ -22,11 +22,13 @@ Use um cliente WebSocket (Insomnia, Postman WebSocket, wscat, etc.).
 { "join": "tumba", "enemy": true }
 ```
 
-3) Iniciar batalha (define ordem de turnos por `speed`; `battle` pode indicar quem inicia o primeiro turno):
+3) Iniciar batalha (com ou sem votação):
 
 ```json
-{ "battle": "tumba" }
+{ "battle": "tumba", "voteEnabled": true }
 ```
+
+- Se `voteEnabled` for `true`, a batalha entra em fase de votação antes de iniciar turnos.
 
 4) Executar ataque (somente o nome do ataque):
 
@@ -51,6 +53,15 @@ Observações:
 - O dano é calculado por `(atk * (random + (power * 10)) - def) / 200` com `random in [1,100]` e multiplicador 2x quando `random >= 90`. O dano mínimo é 1.
 - PP: cada ataque possui `fullPP` e `currentPP` na batalha; quando `currentPP` chegar a 0, o ataque não pode ser usado até a próxima batalha.
 
+5) Votar (apenas `enemy: false`):
+
+```json
+{ "vote": "UNTIL_DEATH", "user": "aliado1" }
+```
+
+- Valores válidos: `UNTIL_DEATH` ou `TO_PARTY`.
+- Se `user` não for enviado, o servidor tenta inferir pelo socket (quando possível).
+
 ### Mensagens do Servidor → Clientes
 
 1) Confirmação de join (apenas para quem entrou):
@@ -59,22 +70,33 @@ Observações:
 { "joined": "tumba", "enemy": true }
 ```
 
-2) Início de batalha e ordem de turnos:
+2) Início de votação (quando `voteEnabled = true`):
 
 ```json
-{
-  "battle": "tumba",
-  "turns": [
-    { "id": "inimigo1", "asset": "asset-inimigo1", "enemy": true },
-    { "id": "aliado1",  "asset": "asset-aliado1",  "enemy": false },
-    { "id": "aliado2",  "asset": "asset-aliado2",  "enemy": false },
-    { "id": "inimigo2", "asset": "asset-inimigo2", "enemy": true },
-    { "id": "aliado3",  "asset": "asset-aliado3",  "enemy": false }
-  ]
-}
+{ "voting": { "UNTIL_DEATH": 0, "TO_PARTY": 0 } }
 ```
 
-3) Atualização de estado (HP e PP dos participantes) e novos turnos:
+- O servidor vai enviar atualizações de votos a cada novo voto recebido:
+
+```json
+{ "voting": { "UNTIL_DEATH": 1, "TO_PARTY": 0 } }
+```
+
+- A votação encerra quando todos os `enemy: false` que deram `join` tiverem votado. Em caso de empate, considera `TO_PARTY`.
+- Ao encerrar a votação, o servidor envia os votos finais e em seguida inicia a batalha com a ordem de turnos:
+
+```json
+{ "voting": { "UNTIL_DEATH": 2, "TO_PARTY": 3 } }
+{ "battle": "", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
+```
+
+3) Início de batalha e ordem de turnos (quando sem votação):
+
+```json
+{ "battle": "tumba", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
+```
+
+4) Atualização de estado (HP e PP dos participantes) e novos turnos:
 
 ```json
 {
