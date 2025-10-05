@@ -48,6 +48,12 @@ Use um cliente WebSocket (Insomnia, Postman WebSocket, wscat, etc.).
 { "clean": true }
 ```
 
+6) Sair da fila (remover aliado específico):
+
+```json
+{ "leave": "aliado1" }
+```
+
 Observações:
 - O servidor valida se o ataque existe na lista de `attacks` do Tyrant atacante.
 - O dano é calculado por `(atk * (random + (power * 10)) - def) / 200` com `random in [1,100]` e multiplicador 2x quando `random >= 90`. O dano mínimo é 1.
@@ -68,6 +74,12 @@ Observações:
 
 ```json
 { "joined": "tumba", "enemy": true, "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
+```
+
+2) Ally deixou a fila (broadcast):
+
+```json
+{ "left": "aliado1", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
 ```
 
 2) Início de votação (quando `voteEnabled = true`):
@@ -95,6 +107,8 @@ Observações:
       "id": "mystelune",
       "fullHp": 120,
       "currentHp": 120,
+      "asset": "asset-aliado1",
+      "enemy": false,
       "attacks": [
         { "name": "Salto", "fullPP": 15, "currentPP": 15 },
         { "name": "Investida", "fullPP": 25, "currentPP": 25 }
@@ -104,6 +118,8 @@ Observações:
       "id": "platybot",
       "fullHp": 110,
       "currentHp": 110,
+      "asset": "asset-inimigo1",
+      "enemy": true,
       "attacks": [
         { "name": "Golpe", "fullPP": 20, "currentPP": 20 }
       ]
@@ -119,8 +135,8 @@ Observações:
   "battle": "tumba",
   "turns": [ {"id":"...","asset":"...","enemy":false}, ... ],
   "tyrants": [
-    { "id": "mystelune", "fullHp": 120, "currentHp": 120, "attacks": [ { "name": "Salto", "fullPP": 15, "currentPP": 15 } ] },
-    { "id": "platybot",  "fullHp": 110, "currentHp": 110, "attacks": [ { "name": "Golpe",  "fullPP": 20, "currentPP": 20 } ] }
+    { "id": "mystelune", "fullHp": 120, "currentHp": 120, "asset": "asset-aliado1", "enemy": false, "attacks": [ { "name": "Salto", "fullPP": 15, "currentPP": 15 } ] },
+    { "id": "platybot",  "fullHp": 110, "currentHp": 110, "asset": "asset-inimigo1", "enemy": true,  "attacks": [ { "name": "Golpe",  "fullPP": 20, "currentPP": 20 } ] }
   ]
 }
 ```

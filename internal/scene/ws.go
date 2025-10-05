@@ -115,6 +115,7 @@ type incoming struct {
 	Enemy       *bool        `json:"enemy,omitempty"`
 	Attack      *attackEvent `json:"attack,omitempty"`
 	Clean       *bool        `json:"clean,omitempty"`
+	Leave       *string      `json:"leave,omitempty"`
 	Vote        *string      `json:"vote,omitempty"`
 	User        *string      `json:"user,omitempty"`
 }
@@ -145,6 +146,21 @@ func (h *Hub) handleIncoming(c *Client, data []byte) {
 		h.handleAttack(*msg.Attack)
 	case msg.Clean != nil && *msg.Clean:
 		h.handleClean()
+	case msg.Leave != nil:
+		allyID := *msg.Leave
+		if allyID == "" {
+			if msg.User != nil {
+				allyID = *msg.User
+			} else {
+				for id, cli := range h.tyrantIDToClient {
+					if cli == c {
+						allyID = id
+						break
+					}
+				}
+			}
+		}
+		h.handleLeave(c, allyID)
 	case msg.Vote != nil:
 		var voter string
 		if msg.User != nil {
@@ -188,6 +204,79 @@ func (h *Hub) handleClean() {
 	h.mu.Unlock()
 
 	h.broadcast(map[string]any{"clean": true, "turns": turns})
+}
+
+func (h *Hub) handleLeave(c *Client, allyID string) {
+	h.mu.Lock()
+	p := h.participants[allyID]
+	if p == nil || p.Enemy {
+		h.mu.Unlock()
+		if c != nil {
+			_ = c.conn.WriteJSON(map[string]any{"error": "ally not found"})
+		}
+		return
+	}
+	delete(h.participants, allyID)
+	delete(h.tyrantIDToClient, allyID)
+	// adjust voting if active
+	if h.votingActive {
+		if prev, ok := h.votedAllies[allyID]; ok {
+			switch prev {
+			case "UNTIL_DEATH":
+				if h.voteUntilDeath > 0 {
+					h.voteUntilDeath--
+				}
+			case "TO_PARTY":
+				if h.voteToParty > 0 {
+					h.voteToParty--
+				}
+			}
+			delete(h.votedAllies, allyID)
+		}
+		// recompute total allies
+		h.totalAllies = 0
+		for _, part := range h.participants {
+			if part != nil && !part.Enemy {
+				h.totalAllies++
+			}
+		}
+		if len(h.votedAllies) >= h.totalAllies {
+			// finalize voting
+			h.votingActive = false
+			h.inBattle = true
+			// tie -> TO_PARTY
+			result := "TO_PARTY"
+			if h.voteUntilDeath > h.voteToParty {
+				result = "UNTIL_DEATH"
+			}
+			_ = result
+			counts := map[string]int{"UNTIL_DEATH": h.voteUntilDeath, "TO_PARTY": h.voteToParty}
+			// snapshot tyrants
+			tyrantUpdates := make([]map[string]any, 0, len(h.participants))
+			for id, pr := range h.participants {
+				attacksArr := make([]map[string]any, 0, len(pr.AttackPP))
+				for name, v := range pr.AttackPP {
+					attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
+				}
+				tyrantUpdates = append(tyrantUpdates, map[string]any{
+					"id": id, "fullHp": pr.FullHP, "currentHp": pr.CurrentHP, "attacks": attacksArr,
+				})
+			}
+			h.mu.Unlock()
+			turns := h.turnsViewLocked()
+			h.broadcast(map[string]any{"battle": h.battleStartedWith, "turns": turns, "voting": counts, "tyrants": tyrantUpdates})
+			return
+		}
+	}
+	// recompute order and possibly current actor
+	h.computeTurnOrderLocked()
+	if h.inBattle && h.currentActor == allyID {
+		next := h.nextAliveLocked()
+		h.currentActor = next
+	}
+	turns := h.turnsViewLocked()
+	h.mu.Unlock()
+	h.broadcast(map[string]any{"left": allyID, "turns": turns})
 }
 
 func (h *Hub) handleVote(c *Client, voterID string, choice string) {
@@ -258,6 +347,8 @@ func (h *Hub) handleVote(c *Client, voterID string, choice string) {
 				"id":        id,
 				"fullHp":    p.FullHP,
 				"currentHp": p.CurrentHP,
+				"asset":     p.Tyrant.Asset,
+				"enemy":     p.Enemy,
 				"attacks":   attacksArr,
 			})
 		}
@@ -363,6 +454,8 @@ func (h *Hub) handleBattle(startWith string, voteEnabled bool) {
 			"id":        id,
 			"fullHp":    p.FullHP,
 			"currentHp": p.CurrentHP,
+			"asset":     p.Tyrant.Asset,
+			"enemy":     p.Enemy,
 			"attacks":   attacksArr,
 		})
 	}
@@ -490,6 +583,8 @@ func (h *Hub) handleAttack(a attackEvent) {
 			"id":        id,
 			"fullHp":    p.FullHP,
 			"currentHp": p.CurrentHP,
+			"asset":     p.Tyrant.Asset,
+			"enemy":     p.Enemy,
 			"attacks":   attacksArr,
 		})
 	}
