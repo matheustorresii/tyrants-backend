@@ -48,7 +48,7 @@ type Hub struct {
 	votingActive   bool
 	voteUntilDeath int
 	voteToParty    int
-	votedAllies    map[string]bool
+	votedAllies    map[string]string
 	totalAllies    int
 }
 
@@ -206,14 +206,21 @@ func (h *Hub) handleVote(c *Client, voterID string, choice string) {
 		}
 		return
 	}
-	if h.votedAllies[voterID] {
-		counts := map[string]int{"UNTIL_DEATH": h.voteUntilDeath, "TO_PARTY": h.voteToParty}
-		h.mu.Unlock()
-		if c != nil {
-			_ = c.conn.WriteJSON(map[string]any{"voting": counts})
+	prev, hasPrev := h.votedAllies[voterID]
+	// decrement previous choice if changing vote
+	if hasPrev {
+		switch prev {
+		case "UNTIL_DEATH":
+			if h.voteUntilDeath > 0 {
+				h.voteUntilDeath--
+			}
+		case "TO_PARTY":
+			if h.voteToParty > 0 {
+				h.voteToParty--
+			}
 		}
-		return
 	}
+
 	switch choice {
 	case "UNTIL_DEATH":
 		h.voteUntilDeath++
@@ -226,7 +233,7 @@ func (h *Hub) handleVote(c *Client, voterID string, choice string) {
 		}
 		return
 	}
-	h.votedAllies[voterID] = true
+	h.votedAllies[voterID] = choice
 	counts := map[string]int{"UNTIL_DEATH": h.voteUntilDeath, "TO_PARTY": h.voteToParty}
 	done := len(h.votedAllies) >= h.totalAllies
 	if done {
@@ -318,7 +325,7 @@ func (h *Hub) handleBattle(startWith string, voteEnabled bool) {
 	if voteEnabled {
 		h.voteUntilDeath = 0
 		h.voteToParty = 0
-		h.votedAllies = make(map[string]bool)
+		h.votedAllies = make(map[string]string)
 		h.totalAllies = 0
 		for _, p := range h.participants {
 			if p != nil && !p.Enemy {
