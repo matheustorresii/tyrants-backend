@@ -13,7 +13,7 @@ Use um cliente WebSocket (Insomnia, Postman WebSocket, wscat, etc.).
 1) Exibir imagem (broadcast):
 
 ```json
-{ "image": "https://link-ou-id-da-imagem" }
+{ "image": "https://link-ou-id-da-imagem", "fill": false }
 ```
 
 2) Entrar na cena com um Tyrant (opcional `enemy`):
@@ -83,11 +83,10 @@ Observações:
 ```
 
 - A votação encerra quando todos os `enemy: false` que deram `join` tiverem votado. Em caso de empate, considera `TO_PARTY`.
-- Ao encerrar a votação, o servidor envia os votos finais e em seguida inicia a batalha com a ordem de turnos:
+- Ao encerrar a votação, o servidor inicia a batalha e envia UMA mensagem contendo o resultado final da votação e a ordem de turnos:
 
 ```json
-{ "voting": { "UNTIL_DEATH": 2, "TO_PARTY": 3 } }
-{ "battle": "", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
+{ "battle": "", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ], "voting": { "UNTIL_DEATH": 2, "TO_PARTY": 3 } }
 ```
 
 3) Início de batalha e ordem de turnos (quando sem votação):
