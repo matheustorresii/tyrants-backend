@@ -64,10 +64,10 @@ Observações:
 
 ### Mensagens do Servidor → Clientes
 
-1) Confirmação de join (apenas para quem entrou):
+1) Join (broadcast para todos) com fila completa:
 
 ```json
-{ "joined": "tumba", "enemy": true }
+{ "joined": "tumba", "enemy": true, "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
 ```
 
 2) Início de votação (quando `voteEnabled = true`):
@@ -83,16 +83,46 @@ Observações:
 ```
 
 - A votação encerra quando todos os `enemy: false` que deram `join` tiverem votado. Em caso de empate, considera `TO_PARTY`.
-- Ao encerrar a votação, o servidor inicia a batalha e envia UMA mensagem contendo o resultado final da votação e a ordem de turnos:
+- Ao encerrar a votação, o servidor inicia a batalha e envia UMA mensagem contendo o resultado final da votação, a ordem de turnos e o snapshot dos tyrants (HP/PP):
 
 ```json
-{ "battle": "", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ], "voting": { "UNTIL_DEATH": 2, "TO_PARTY": 3 } }
+{
+  "battle": "tumba",
+  "turns": [ {"id":"...","asset":"...","enemy":false}, ... ],
+  "voting": { "UNTIL_DEATH": 2, "TO_PARTY": 3 },
+  "tyrants": [
+    {
+      "id": "mystelune",
+      "fullHp": 120,
+      "currentHp": 120,
+      "attacks": [
+        { "name": "Salto", "fullPP": 15, "currentPP": 15 },
+        { "name": "Investida", "fullPP": 25, "currentPP": 25 }
+      ]
+    },
+    {
+      "id": "platybot",
+      "fullHp": 110,
+      "currentHp": 110,
+      "attacks": [
+        { "name": "Golpe", "fullPP": 20, "currentPP": 20 }
+      ]
+    }
+  ]
+}
 ```
 
-3) Início de batalha e ordem de turnos (quando sem votação):
+3) Início de batalha (quando sem votação):
 
 ```json
-{ "battle": "tumba", "turns": [ {"id":"...","asset":"...","enemy":false}, ... ] }
+{
+  "battle": "tumba",
+  "turns": [ {"id":"...","asset":"...","enemy":false}, ... ],
+  "tyrants": [
+    { "id": "mystelune", "fullHp": 120, "currentHp": 120, "attacks": [ { "name": "Salto", "fullPP": 15, "currentPP": 15 } ] },
+    { "id": "platybot",  "fullHp": 110, "currentHp": 110, "attacks": [ { "name": "Golpe",  "fullPP": 20, "currentPP": 20 } ] }
+  ]
+}
 ```
 
 4) Atualização de estado (HP e PP dos participantes) e novos turnos:

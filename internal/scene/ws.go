@@ -44,6 +44,8 @@ type Hub struct {
 	turnIndex        int
 	inBattle         bool
 	currentActor     string
+	// battle start identifier (who starts)
+	battleStartedWith string
 	// voting state
 	votingActive   bool
 	voteUntilDeath int
@@ -245,9 +247,23 @@ func (h *Hub) handleVote(c *Client, voterID string, choice string) {
 			result = "UNTIL_DEATH"
 		}
 		_ = result
+		// build tyrants snapshot
+		tyrantUpdates := make([]map[string]any, 0, len(h.participants))
+		for id, p := range h.participants {
+			attacksArr := make([]map[string]any, 0, len(p.AttackPP))
+			for name, v := range p.AttackPP {
+				attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
+			}
+			tyrantUpdates = append(tyrantUpdates, map[string]any{
+				"id":        id,
+				"fullHp":    p.FullHP,
+				"currentHp": p.CurrentHP,
+				"attacks":   attacksArr,
+			})
+		}
 		h.mu.Unlock()
 		turns := h.turnsViewLocked()
-		h.broadcast(map[string]any{"battle": "", "turns": turns, "voting": counts})
+		h.broadcast(map[string]any{"battle": h.battleStartedWith, "turns": turns, "voting": counts, "tyrants": tyrantUpdates})
 		return
 	}
 	h.mu.Unlock()
@@ -287,20 +303,20 @@ func (h *Hub) handleJoin(c *Client, tyrantID string, enemy *bool) {
 		h.participants[t.ID] = p
 	}
 	h.tyrantIDToClient[t.ID] = c
-	// recalculate turn order if already in battle
-	if h.inBattle {
-		h.computeTurnOrderLocked()
-	}
+	// recompute turn order and build current queue
+	h.computeTurnOrderLocked()
+	turns := h.turnsViewLocked()
 	h.mu.Unlock()
 
-	// acknowledge join
-	_ = c.conn.WriteJSON(map[string]any{"joined": t.ID, "enemy": en})
+	// broadcast join event with full queue to everyone
+	h.broadcast(map[string]any{"joined": t.ID, "enemy": en, "turns": turns})
 }
 
 func (h *Hub) handleBattle(startWith string, voteEnabled bool) {
 	h.mu.Lock()
 	h.inBattle = !voteEnabled
 	h.votingActive = voteEnabled
+	h.battleStartedWith = startWith
 	// Reset HP/Alive and PP for a new battle
 	for _, p := range h.participants {
 		p.CurrentHP = p.FullHP
@@ -336,9 +352,23 @@ func (h *Hub) handleBattle(startWith string, voteEnabled bool) {
 		h.broadcast(map[string]any{"voting": map[string]int{"UNTIL_DEATH": 0, "TO_PARTY": 0}})
 		return
 	}
+	// build tyrants snapshot
+	tyrantUpdates := make([]map[string]any, 0, len(h.participants))
+	for id, p := range h.participants {
+		attacksArr := make([]map[string]any, 0, len(p.AttackPP))
+		for name, v := range p.AttackPP {
+			attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
+		}
+		tyrantUpdates = append(tyrantUpdates, map[string]any{
+			"id":        id,
+			"fullHp":    p.FullHP,
+			"currentHp": p.CurrentHP,
+			"attacks":   attacksArr,
+		})
+	}
 	h.mu.Unlock()
 	turns := h.turnsViewLocked()
-	h.broadcast(map[string]any{"battle": startWith, "turns": turns})
+	h.broadcast(map[string]any{"battle": startWith, "turns": turns, "tyrants": tyrantUpdates})
 }
 
 func (h *Hub) computeTurnOrderLocked() {
