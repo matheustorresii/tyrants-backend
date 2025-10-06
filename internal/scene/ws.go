@@ -256,9 +256,12 @@ func (h *Hub) handleLeave(c *Client, allyID string) {
 			}
 			_ = result
 			counts := map[string]int{"UNTIL_DEATH": h.voteUntilDeath, "TO_PARTY": h.voteToParty}
-			// snapshot tyrants
+			// snapshot tyrants (only alive participants)
 			tyrantUpdates := make([]map[string]any, 0, len(h.participants))
 			for id, pr := range h.participants {
+				if pr == nil || !pr.Alive {
+					continue
+				}
 				attacksArr := make([]map[string]any, 0, len(pr.AttackPP))
 				for name, v := range pr.AttackPP {
 					attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
@@ -341,9 +344,12 @@ func (h *Hub) handleVote(c *Client, voterID string, choice string) {
 			result = "UNTIL_DEATH"
 		}
 		_ = result
-		// build tyrants snapshot
+		// build tyrants snapshot (only alive participants)
 		tyrantUpdates := make([]map[string]any, 0, len(h.participants))
 		for id, p := range h.participants {
+			if p == nil || !p.Alive {
+				continue
+			}
 			attacksArr := make([]map[string]any, 0, len(p.AttackPP))
 			for name, v := range p.AttackPP {
 				attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
@@ -448,9 +454,12 @@ func (h *Hub) handleBattle(startWith string, voteEnabled bool) {
 		h.broadcast(map[string]any{"voting": map[string]int{"UNTIL_DEATH": 0, "TO_PARTY": 0}})
 		return
 	}
-	// build tyrants snapshot
+	// build tyrants snapshot (only alive participants)
 	tyrantUpdates := make([]map[string]any, 0, len(h.participants))
 	for id, p := range h.participants {
+		if p == nil || !p.Alive {
+			continue
+		}
 		attacksArr := make([]map[string]any, 0, len(p.AttackPP))
 		for name, v := range p.AttackPP {
 			attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
@@ -580,6 +589,9 @@ func (h *Hub) handleAttack(a attackEvent) {
 	// Build HP+PP update snapshot as array
 	tyrantUpdates := make([]map[string]any, 0, len(h.participants))
 	for id, p := range h.participants {
+		if p == nil || !p.Alive {
+			continue
+		}
 		attacksArr := make([]map[string]any, 0, len(p.AttackPP))
 		for name, v := range p.AttackPP {
 			attacksArr = append(attacksArr, map[string]any{"name": name, "fullPP": v.Full, "currentPP": v.Current})
