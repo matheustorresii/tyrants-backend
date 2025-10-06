@@ -42,10 +42,16 @@ Use um cliente WebSocket (Insomnia, Postman WebSocket, wscat, etc.).
 }
 ```
 
-5) Limpar batalha/fila (remover inimigos, manter protagonistas prontos):
+5) Limpar batalha/fila (remover inimigos por padrão; opcionalmente incluir aliados):
 
 ```json
 { "clean": true }
+```
+
+Ou, para remover também os aliados:
+
+```json
+{ "clean": true, "includeAllies": true }
 ```
 
 6) Sair da fila (remover aliado específico):
@@ -151,6 +157,8 @@ Observações:
         "id": "mystelune",
         "fullHp": 120,
         "currentHp": 95,
+        "asset": "asset-aliado1",
+        "enemy": false,
         "attacks": [
           { "name": "Salto", "fullPP": 15, "currentPP": 14 },
           { "name": "Investida", "fullPP": 25, "currentPP": 25 }
@@ -160,11 +168,14 @@ Observações:
         "id": "platybot",
         "fullHp": 110,
         "currentHp": 110,
+        "asset": "asset-inimigo1",
+        "enemy": true,
         "attacks": [
           { "name": "Golpe", "fullPP": 20, "currentPP": 20 }
         ]
       }
-    ]
+    ],
+    "lastAttack": { "user": "mystelune", "target": "platybot", "attack": "Salto" }
   },
   "turns": [
     { "id": "aliado1",  "asset": "asset-aliado1",  "enemy": false },

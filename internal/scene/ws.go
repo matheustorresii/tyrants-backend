@@ -107,17 +107,18 @@ type attackEvent struct {
 }
 
 type incoming struct {
-	Image       *string      `json:"image,omitempty"`
-	Fill        *bool        `json:"fill,omitempty"`
-	Battle      *string      `json:"battle,omitempty"`
-	VoteEnabled *bool        `json:"voteEnabled,omitempty"`
-	Join        *string      `json:"join,omitempty"`
-	Enemy       *bool        `json:"enemy,omitempty"`
-	Attack      *attackEvent `json:"attack,omitempty"`
-	Clean       *bool        `json:"clean,omitempty"`
-	Leave       *string      `json:"leave,omitempty"`
-	Vote        *string      `json:"vote,omitempty"`
-	User        *string      `json:"user,omitempty"`
+	Image         *string      `json:"image,omitempty"`
+	Fill          *bool        `json:"fill,omitempty"`
+	Battle        *string      `json:"battle,omitempty"`
+	VoteEnabled   *bool        `json:"voteEnabled,omitempty"`
+	Join          *string      `json:"join,omitempty"`
+	Enemy         *bool        `json:"enemy,omitempty"`
+	Attack        *attackEvent `json:"attack,omitempty"`
+	Clean         *bool        `json:"clean,omitempty"`
+	IncludeAllies *bool        `json:"includeAllies,omitempty"`
+	Leave         *string      `json:"leave,omitempty"`
+	Vote          *string      `json:"vote,omitempty"`
+	User          *string      `json:"user,omitempty"`
 }
 
 func (h *Hub) handleIncoming(c *Client, data []byte) {
@@ -145,7 +146,11 @@ func (h *Hub) handleIncoming(c *Client, data []byte) {
 	case msg.Attack != nil:
 		h.handleAttack(*msg.Attack)
 	case msg.Clean != nil && *msg.Clean:
-		h.handleClean()
+		includeAllies := false
+		if msg.IncludeAllies != nil {
+			includeAllies = *msg.IncludeAllies
+		}
+		h.handleClean(includeAllies)
 	case msg.Leave != nil:
 		allyID := *msg.Leave
 		if allyID == "" {
@@ -179,14 +184,14 @@ func (h *Hub) handleIncoming(c *Client, data []byte) {
 	}
 }
 
-func (h *Hub) handleClean() {
+func (h *Hub) handleClean(includeAllies bool) {
 	h.mu.Lock()
 	// stop battle
 	h.inBattle = false
 	h.currentActor = ""
 	// remove only enemies
 	for id, p := range h.participants {
-		if p.Enemy {
+		if p.Enemy || includeAllies {
 			delete(h.participants, id)
 			delete(h.tyrantIDToClient, id)
 		} else {
@@ -588,6 +593,8 @@ func (h *Hub) handleAttack(a attackEvent) {
 			"attacks":   attacksArr,
 		})
 	}
+	// Last attack used
+	lastAttack := map[string]any{"user": a.User, "target": a.Target, "attack": a.Attack}
 	// Determine victory
 	allEnemiesDown := true
 	allAlliesDown := true
@@ -599,7 +606,7 @@ func (h *Hub) handleAttack(a attackEvent) {
 			allAlliesDown = false
 		}
 	}
-	var status any = map[string]any{"tyrants": tyrantUpdates}
+	var status any = map[string]any{"tyrants": tyrantUpdates, "lastAttack": lastAttack}
 	if allEnemiesDown {
 		status = "WIN"
 		h.inBattle = false
